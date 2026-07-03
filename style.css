@@ -25,6 +25,19 @@ body {
     align-items: center;
 }
 
+.container {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.134);
+    background: rgba(18, 28, 51, 0.55);
+    backdrop-filter: blur(20px);
+    width: 50%;
+    max-height: 100px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    justify-content: center;
+    align-items: center;
+}
 
 h1 {
     font-size: 2.5rem;
@@ -33,9 +46,9 @@ h1 {
     text-align: center;
     margin-bottom: 5rem;
     margin-top: 5rem;
+    text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
 
 }
-
 
 .Upload_File {
     background: rgba(18, 28, 51, 0.55);
@@ -46,7 +59,7 @@ h1 {
     padding: 32px;
     margin-top: 2rem;
     margin-bottom: 5 rem;
-    ;
+    width: 60%;
 }
 
 .Upload_File>p {
@@ -61,13 +74,33 @@ h1 {
     padding: 28px 16px;
     text-align: center;
     background: rgba(255, 255, 255, .04);
-
-    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .Upload_File_container:hover {
     border-color: #4F8DFF;
     background: rgba(79, 141, 255, .08);
+}
+
+
+input[type="file"] {
+    font-size: 0.95rem;
+    color: #B8BCC8;
+}
+
+
+input[type="file"]::file-selector-button {
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1 rem;
+    background: linear-gradient(135deg, #4F8DFF, #2563EB);
+    color: #FFFFFF;
+}
+
+input[type="file"]::file-selector-button:hover {
+    box-shadow: 0 0 25px rgba(79, 141, 255, .4);
+
+    filter: brightness(110%);
 }
 
 #cn_btn {
@@ -87,7 +120,6 @@ h1 {
     border-radius: 8px;
     font-size: 0.95rem;
     font-weight: 600;
-    transition: background 0.2s ease, transform 0.1s ease;
     width: 30%;
 }
 
@@ -97,9 +129,7 @@ h1 {
     filter: brightness(110%);
 }
 
-#convert_btn:active {
-    transform: scale(0.98);
-}
+
 
 #status {
     margin-top: 16px;
