@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>PDF to Docx CONVERTER</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>PDF ⟶ DOCX</h>
+        <div class="Upload_File">
+            <p>Upload PDF File Below</p>
+            <div class="Upload_File_container">
+                <!--Formate check : ONLY ALLOW PDF FILES-->
+                <input type="file" id="pdfFile" multiple accept=".pdf">
+            </div>
+            <div id="cn_btn">
+                <button id="convert_btn">Convert</button>
+            </div>
+            <p id="status"></p>
+            <div id="download"></div>
+            <div id="fileList">
+            </div>
+        </div>
+        </div>
+
+        <script src="script.js"></script>
+</body>
+
+</html>
