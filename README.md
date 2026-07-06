@@ -41,7 +41,7 @@ A drag-and-drop web tool that converts PDF files into editable Word documents. I
 ## Project Structure
 
 ```
-student_Performance_Tracker/
+PDF_to_Doc_Converter/
 ├── app.py              Flask backend + API routes
 ├── task.py             Helper functions
 ├── index.html          Frontend structure
