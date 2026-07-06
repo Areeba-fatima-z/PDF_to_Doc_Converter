@@ -1,18 +1,26 @@
 import redis
 import json
 import os
-import shutil
-from datetime import timedelta
 from rq import Queue
 from pdf2docx import Converter
+import time
 
-# Redis + Queue yahan define hoga (app.py isko import karega)
+
 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 q = Queue(connection=r)
 
 UPLOAD_DIR = 'uploads'
 OUTPUT_DIR = 'output'
 
+# fetch job information if it exists
+def get_job(job_id):
+    g_job = r.get(f"Job:{job_id}")
+    if g_job :
+        #json.loads () convert string into dictionary 
+        return json.loads(g_job)
+    else:
+        return None 
+ 
 
 def save_job(job_id , data):
     # set value in redit (key , value)  | json.deumps = convert dictionary in string 
@@ -23,14 +31,21 @@ def  save_files(job_id , files_list):
 
 
 def convert_pdf(job_id):
-
     upload_folder = os.path.join(UPLOAD_DIR, job_id)
     output_folder = os.path.join(OUTPUT_DIR, job_id)
     os.makedirs(output_folder, exist_ok=True)
 
+    all_files=os.listdir(upload_folder)
+    total=len(all_files)
+
+    current = get_job(job_id)
+    rejected=current.get('rejected',[])
     converted = []
     succeded = 0
     failed = 0
+    save_job(job_id, {
+        'status': 'processing', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected
+    })
 
     # listdir(upload_folder) = list files of upload folder
     for filename in os.listdir(upload_folder):
@@ -48,28 +63,17 @@ def convert_pdf(job_id):
             converted.append({'output_name': docx_name, 'size_bytes': os.path.getsize(docx_path)})
             succeded += 1
 
+
         except Exception as e:
             print(f"Failed to convert {filename}: {e}")
             failed += 1
+        time.sleep(2)
+        save_job(job_id, {'status': 'processing', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected })
 
     save_files(job_id, converted)
+    time.sleep(5)
     save_job(job_id, {
-        'status': 'completed', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed
+        'status': 'completed', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected
     })
 
-    q.enqueue_in(timedelta(hours=1), cleanup, job_id)
 
-
-def cleanup(job_id):
-    r.delete(f"Job:{job_id}")
-    r.delete(f"Files:{job_id}")
-    
-    # Remove tree = Folder - sub Folder - files
-    shutil.rmtree(os.path.join(UPLOAD_DIR,job_id),ignore_errors=True)
-    shutil.rmtree(os.path.join(OUTPUT_DIR,job_id),ignore_errors=True)
-
-    zip_path= os.path.join(OUTPUT_DIR,f"{job_id}.zip")
-    if  os.path.exists(zip_path):
-        os.remove(zip_path)
-
-    print("Auto cleanedup Job : {job_id}")

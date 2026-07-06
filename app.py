@@ -1,42 +1,34 @@
-#Tech stack : Python , flask , pyMuPDF , pdf2docx , python-docx, RQ , local storage
-
-from flask import Flask, jsonify, request, send_file ,send_from_directory
+from flask import Flask, jsonify, request, send_file 
 from flask_cors import CORS
-import redis #for RQ 
+import redis # connection to store data 
 import json
 import os
 import uuid  # generates unique id 
 import shutil #Delets folder
 import fitz  # PyMuPDF
-from pdf2docx import Converter # conversion
-from rq import Queue
-from datetime import timedelta
-from task import r , q, save_job ,save_files,convert_pdf,cleanup
-from werkzeug.utils import secure_filename
+from rq import Queue 
+from task import r , q, save_job ,convert_pdf,get_job
+from werkzeug.utils import secure_filename 
+import time
+
 
 app=Flask(__name__)
 CORS(app)
 
 # Redis connection 
 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# queue of jobs 
 q = Queue(connection=r)
 
-
+# Directories to store files
 UPLOAD_DIR = 'uploads'
 OUTPUT_DIR= 'output'
 
-
+# genertaes unique job id
 def generate_job_id():
     return str(uuid.uuid4())
 
-def get_job(job_id):
-    g_job = r.get(f"Job:{job_id}")
-    if g_job :
-        #json.loads () convert string into dictionary 
-        return json.loads(g_job)
-    else:
-        return None 
- 
+ # fetch files in job if job exists
 def get_files(job_id):
     g_file=r.get(f"Files:{job_id}")
     if g_file:
@@ -44,10 +36,15 @@ def get_files(job_id):
     else:
         return []
     
+# validate if pdf is corrupted or password protected
+# with fitz - pyMUPDF 
 def validate_pdf(file):
      try:
+        # read till end of pdf
         pdf_bytes = file.read()
+        # cursor reset to 0
         file.seek(0)
+
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
         if doc.is_encrypted:
@@ -64,18 +61,17 @@ def validate_pdf(file):
         return False, "Corrupted or invalid PDF."
 
 
-
-
 #################################################################################################
 # Rest API's
 
 #POST /convert/pdf-to-docp
 @app.route('/convert/pdf-to-doc' , methods = ['POST'])
 def upload_and_convert():
+    # flask component imported
     file = request.files.getlist('files')
 
     if len(file)==0:
-        return jsonify({'error':'File not Uploaded'}),400 # Not found error code
+        return jsonify({'error':'No file Uploaded'}),400 # Not found error code
     # Upload limit check : Max 100 files 
     if len(file) >100:
         return jsonify({'error':'Can not Upload more than 100 files'}),400
@@ -87,6 +83,10 @@ def upload_and_convert():
     # Folder creation    |  if already exists continue
     os.makedirs(job_folder, exist_ok=True)
 
+
+    accepted=0
+    rejected=[]
+
     for f in file :
         #Move cursor to the end of file
         f.seek(0,os.SEEK_END)
@@ -96,21 +96,31 @@ def upload_and_convert():
         
         # check pdf formate
         if not f.filename.lower().endswith('.pdf'):
-            return jsonify({'error':'Wrong Foramte file uploaded'}),400
+            rejected.append({'filename':f.filename,'reason':'Not a pdf'})
+            continue
         
         # File size check : Max 100MB
         # 1MB = 1024KB = 1024 *1024 byte
-        if size >= 100*1024*1024 :
-            return jsonify({'error': 'File size exceeds the upload limit (100MB)'}),400
+        if size >= 100*1024*1024:
+            rejected.append({'filename':f.filename,'reason':'Exceeded 100MB'})
+            continue
         #Check protected files
         valid, reason = validate_pdf(f)
         if not valid:
-            return jsonify({'error': f'{f.filename}: {reason}'}), 400
+            rejected.append({'filename':f.filename,'reason': reason})
+            continue
         safe_name = secure_filename(f.filename)
-        f.save(os.path.join(job_folder,secure_filename))
-    save_job(job_id,{'status':'queued','total_files':len(file),'succeeded':0,'failed':0 })
+        f.save(os.path.join(job_folder,safe_name))
+        accepted+=1
+
+    if accepted==0:
+         #if no file accepted delete created folder
+         shutil.rmtree(job_folder, ignore_errors=True)
+         return jsonify({'error': 'No valid files uploaded', 'rejected': len(rejected)}), 400
+    save_job(job_id,{'status':'queued','total_files':len(file),'succeeded':0,'failed':0,'rejected' : rejected })
     q.enqueue(convert_pdf, job_id)
-    return jsonify({'job_id': job_id, 'status': 'queued'}), 202
+
+    return jsonify({'job_id': job_id, 'status': 'queued','rejected':rejected,'accepted':accepted}), 202
 
 
 #GET /jobs/{job_id}
@@ -121,6 +131,7 @@ def check_conversion_status(job_id):
         return jsonify({'error':'Job not Found'}),404
     # ** unpack to use data.status
     # data = {'job_id': job_id, **Job}
+    time.sleep(2)
     return jsonify({'job_id': job_id, **Job}), 200 # request done 
 
 
@@ -152,8 +163,8 @@ def download_zip(job_id):
         output_folder = os.path.join(OUTPUT_DIR, job_id)
         if not os.path.exists(output_folder):
             return jsonify({'error': 'Files not ready yet'}), 404
+    #create zip folder
     shutil.make_archive(os.path.join(OUTPUT_DIR, job_id), 'zip', output_folder)
-    # as_attachment = dialogue box asking save as
     return send_file(zip_path, as_attachment=True)
 
 #GET /jobs/<job_id>/files/<filename> single file download 
@@ -176,9 +187,6 @@ def delete_job(job_id):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
     
-    r.delete(f"Job:{job_id}")
-    r.delete(f"Files:{job_id}")
-    
     # Remove tree = Folder - sub Folder - files
     shutil.rmtree(os.path.join(UPLOAD_DIR,job_id),ignore_errors=True)
     shutil.rmtree(os.path.join(OUTPUT_DIR,job_id),ignore_errors=True)
@@ -186,7 +194,8 @@ def delete_job(job_id):
     zip_path= os.path.join(OUTPUT_DIR,f"{job_id}.zip")
     if  os.path.exists(zip_path):
         os.remove(zip_path)
-    return jsonify({'message': 'Job deleted successfully'}), 200
+
+    return jsonify('Job deleted successfully') ,202
 
 
 
