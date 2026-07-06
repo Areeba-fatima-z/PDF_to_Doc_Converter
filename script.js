@@ -76,7 +76,7 @@ function pollJobStatus(jobId) {
                 clearInterval(interval);
                 showDownloadButton(jobId);
                 showIndividualFiles(jobId);
-                // delete in 1 min from upload and output folder
+                // delete in 1 min from upload and output
                 setTimeout(() => {
                     fetch(`${API_BASE}/jobs/${jobId}`, { method: 'DELETE' });
                 }, 60 * 1000);

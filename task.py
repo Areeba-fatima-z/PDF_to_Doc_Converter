@@ -44,7 +44,7 @@ def convert_pdf(job_id):
     succeded = 0
     failed = 0
     save_job(job_id, {
-        'status': 'processing', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected
+        'status': 'processing', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected
     })
 
     # listdir(upload_folder) = list files of upload folder
@@ -68,12 +68,12 @@ def convert_pdf(job_id):
             print(f"Failed to convert {filename}: {e}")
             failed += 1
         time.sleep(2)
-        save_job(job_id, {'status': 'processing', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected })
+        save_job(job_id, {'status': 'processing', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected })
 
     save_files(job_id, converted)
     time.sleep(5)
     save_job(job_id, {
-        'status': 'completed', 'total_files': succeded + failed, 'succeeded': succeded, 'failed': failed,'rejected': rejected
+        'status': 'completed', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected
     })
 
 
