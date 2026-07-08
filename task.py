@@ -1,9 +1,9 @@
 import redis
 import json
 import os
-from rq import Queue
 from pdf2docx import Converter
 import time
+import shutil
 
 
 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
@@ -78,4 +78,27 @@ def convert_pdf(job_id):
         'status': 'completed', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected
     })
 
+def cleanup():
+   curr_time = time.time()
 
+   for folder in [UPLOAD_DIR, OUTPUT_DIR]:
+        if not os.path.exists(folder):
+            continue
+
+        for item in os.listdir(folder):
+            item_path = os.path.join(folder, item)
+
+            try:
+                item_age = curr_time - os.path.getmtime(item_path)
+
+                if item_age > 1800:
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path, ignore_errors=True)
+                        print(f"Deleted folder: {item_path}")
+                    else:
+                        os.remove(item_path)
+                        print(f"Deleted file: {item_path}")
+
+            except Exception as e:
+                print(f"Failed to delete {item_path}: {e}")
+                continue

@@ -7,7 +7,7 @@ import uuid  # generates unique id
 import shutil #Delets folder
 import fitz  # PyMuPDF
 from rq import Queue 
-from task import r , save_job ,convert_pdf,get_job
+from task import r , save_job ,convert_pdf,cleanup,get_job
 from werkzeug.utils import secure_filename 
 import time
 
@@ -186,22 +186,6 @@ def download_singlefile(job_id,filename):
     
     return send_file(file_path,as_attachment=True)
 
-#DELETE /jobs/{job_id}
-@app.route('/jobs/<job_id>', methods=['DELETE'])
-def delete_job(job_id):
-    job = get_job(job_id)
-    if not job:
-        return jsonify({'error': 'Job not found'}), 404
-    
-    # Remove tree = Folder - sub Folder - files
-    shutil.rmtree(os.path.join(UPLOAD_DIR,job_id),ignore_errors=True)
-    shutil.rmtree(os.path.join(OUTPUT_DIR,job_id),ignore_errors=True)
-
-    zip_path= os.path.join(OUTPUT_DIR,f"{job_id}.zip")
-    if  os.path.exists(zip_path):
-        os.remove(zip_path)
-
-    return jsonify('Job deleted successfully') ,202
 
 
 
@@ -210,6 +194,7 @@ def delete_job(job_id):
 if __name__ == '__main__':
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    cleanup()
     app.run(debug=True)
 
 
