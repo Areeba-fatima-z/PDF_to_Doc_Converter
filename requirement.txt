@@ -3,7 +3,5 @@ flask-cors
 pdf2docx
 PyMuPDF
 python-docx
-celery
 redis
 requests
-boto3

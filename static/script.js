@@ -3,8 +3,79 @@ const pdfFile = document.getElementById('pdfFile')
 const status1 = document.getElementById('status')
 const download1 = document.getElementById('download')
 const fileList = document.getElementById('fileList')
+const selected_files_list = document.getElementById('selected_files')
+let selected = []
 const API_BASE = 'http://127.0.0.1:5000';
 
+pdfFile.addEventListener('change', async () => {
+    addFiles(pdfFile.files)
+});
+
+
+function addFiles(newFiles) {
+    for (const file of newFiles) {
+        let exist = false;
+        for (let i = 0; i < selected.length; i++) {
+            if (selected[i].name === file.name && selected[i].size === file.size) {
+                exist = true;
+                break;
+            }
+        }
+        if (!exist) {
+            selected.push(file)
+        }
+
+        renderFiles()
+        sync()
+    }
+
+
+}
+function sync() {
+    const dt = new DataTransfer();
+    for (const file of selected) {
+        dt.items.add(file);
+    }
+    pdfFile.files = dt.files;
+}
+function renderFiles() {
+    if (selected.length === 0) {
+        selected_files_list.innerHTML = '';
+        return;
+    }
+
+    let html = '<ul class="Selected_Files_list" >';
+    selected.forEach((file, index) => {
+        const size = (file.size / 1024).toFixed(1) // change to kb
+
+        html += `
+        <li>
+        <span class="filename">${file.name}</span>
+        <span class="size_kb">${size}KB</span>
+        <button class="btn" data-index="${index}"  type="button">x</button>
+        </li>
+        `
+    })
+    html += '</ul>';
+    selected_files_list.innerHTML = html;
+    const buttons = document.querySelectorAll('.btn');
+
+    for (let i = 0; i < buttons.length; i++) {
+        const btn = buttons[i];
+        btn.addEventListener('click', function (e) {
+            const btn_index = parseInt(e.target.dataset.index);
+
+            remove_file(btn_index)
+        });
+    }
+}
+
+function remove_file(index) {
+    selected.splice(index, 1);
+    sync();
+    renderFiles();
+
+}
 
 upload_btn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -106,7 +177,7 @@ async function showIndividualFiles(jobId) {
 
         let html = '<h3>Individual Files:</h3><ul>';
         for (const file of data.files) {
-            // tofixed (1) - rounf of to decimal 1
+            // tofixed (1) - round of to decimal 1
             html += `
                 <li>
                     ${file.filename} (${(file.size / 1024).toFixed(1)} KB)

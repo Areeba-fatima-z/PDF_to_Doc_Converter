@@ -7,7 +7,6 @@ import time
 
 
 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-q = Queue(connection=r)
 
 UPLOAD_DIR = 'uploads'
 OUTPUT_DIR = 'output'
@@ -23,7 +22,7 @@ def get_job(job_id):
  
 
 def save_job(job_id , data):
-    # set value in redit (key , value)  | json.deumps = convert dictionary in string 
+    # set value in redis (key , value)  | json.deumps = convert dictionary in string 
     r.set(f"Job:{job_id}",json.dumps(data))
 
 def  save_files(job_id , files_list):
@@ -55,9 +54,12 @@ def convert_pdf(job_id):
         docx_path = os.path.join(output_folder, docx_name)
 
         try:
+    
             # convert using pdf2docx
-            cv = Converter(pdf_path)
-            cv.convert(docx_path)
+            # make converter object of pdf
+            cv = Converter(pdf_path)  # pdf2doxc
+            #convert that object and place on doc_path
+            cv.convert(docx_path)    # layout parsing : PyMupdf   creation of .docx : pdf-docx
             cv.close()
 
             converted.append({'output_name': docx_name, 'size_bytes': os.path.getsize(docx_path)})
@@ -71,7 +73,7 @@ def convert_pdf(job_id):
         save_job(job_id, {'status': 'processing', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected })
 
     save_files(job_id, converted)
-    time.sleep(5)
+    time.sleep(3)
     save_job(job_id, {
         'status': 'completed', 'total_files': total, 'succeeded': succeded, 'failed': failed,'rejected': rejected
     })

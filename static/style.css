@@ -221,3 +221,56 @@ input[type="file"]::file-selector-button:hover {
 
     filter: brightness(110%);
 }
+
+#selected_files {
+    margin-top: 16px;
+}
+
+.Selected_Files_list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.Selected_Files_list li {
+    display: flex;
+    align-items: center;
+    background: #151B2C;
+    border: 1px solid #2D3748;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.filename {
+    margin-right: 10px;
+    font-size: 1rem;
+    color: #e2e5e9;
+}
+
+.size_kb {
+    color: #e2e5e9;
+    font-size: 1rem;
+    margin-right: 10px;
+}
+
+.btn {
+    background: #EF4444;
+    color: white;
+    border: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.btn:hover {
+    background: #DC2626;
+}

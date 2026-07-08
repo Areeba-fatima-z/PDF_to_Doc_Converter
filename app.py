@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file 
+from flask import Flask, jsonify, request, send_file ,render_template
 from flask_cors import CORS
 import redis # connection to store data 
 import json
@@ -7,10 +7,9 @@ import uuid  # generates unique id
 import shutil #Delets folder
 import fitz  # PyMuPDF
 from rq import Queue 
-from task import r , q, save_job ,convert_pdf,get_job
+from task import r , save_job ,convert_pdf,get_job
 from werkzeug.utils import secure_filename 
 import time
-
 
 app=Flask(__name__)
 CORS(app)
@@ -23,6 +22,12 @@ q = Queue(connection=r)
 # Directories to store files
 UPLOAD_DIR = 'uploads'
 OUTPUT_DIR= 'output'
+
+# API routes to render html file 
+
+@app.route('/')
+def serve():
+    return render_template('index.html')
 
 # genertaes unique job id
 def generate_job_id():
@@ -76,6 +81,7 @@ def upload_and_convert():
     if len(file) >100:
         return jsonify({'error':'Can not Upload more than 100 files'}),400
     
+
     #unique job id 
     job_id = generate_job_id()
     # folder path like : 'uploads/a1b2c3d4' 
